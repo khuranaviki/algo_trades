@@ -1,0 +1,22 @@
+# Algorithmic Trading Requirements
+
+# Core backtesting framework
+backtrader>=1.9.78.123
+
+# Data fetching and analysis
+yfinance>=0.2.28
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Scientific computing for pattern detection
+scipy>=1.10.0
+
+# Utilities
+python-dateutil>=2.8.0
+pytz>=2023.3
+
+# Optional: for plotting backtest results
+matplotlib>=3.7.0
+
+# Optional: for advanced analytics
+ta-lib>=0.4.0  # Technical analysis library (optional, requires binary installation)
