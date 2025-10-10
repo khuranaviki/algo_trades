@@ -1,0 +1,323 @@
+# Agent Configuration for Agentic Trading System
+
+# Global agent settings
+global:
+  timeout_seconds: 300
+  enable_parallel_execution: true
+  max_parallel_agents: 4
+  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  health_check_interval_seconds: 60
+
+# Orchestrator Agent
+orchestrator:
+  enabled: true
+  name: "Orchestrator"
+  description: "Master agent coordinating all other agents"
+
+  decision_weights:
+    fundamental: 0.30
+    technical: 0.30
+    sentiment: 0.20
+    management: 0.20
+
+  veto_thresholds:
+    fundamental_score: 50  # Below this = veto
+    management_score: 40   # Below this = veto
+    technical_win_rate: 70  # Below this = veto (%)
+    sentiment_score: 30    # Below this = warning only
+
+  consensus_requirements:
+    minimum_agents_agree: 3  # At least 3 agents must agree
+    minimum_confidence: 60   # Average confidence must be > 60%
+
+  risk_limits:
+    max_position_size: 0.05  # 5% of portfolio
+    max_concurrent_positions: 10
+    max_sector_exposure: 0.30  # 30% in one sector
+
+  execution:
+    auto_execute: false  # Manual approval required
+    paper_trading: true  # Start with paper trading
+
+# Fundamental Analyst Agent
+fundamental_analyst:
+  enabled: true
+  name: "Fundamental Analyst"
+  description: "Analyzes financial health, growth, and valuation"
+
+  weights:
+    financial_health: 0.30
+    growth: 0.30
+    valuation: 0.20
+    quality: 0.20
+
+  scoring_criteria:
+    financial_health:
+      debt_to_equity:
+        excellent: 0.5
+        good: 1.0
+        average: 2.0
+      current_ratio:
+        excellent: 2.0
+        good: 1.5
+        average: 1.0
+      interest_coverage:
+        excellent: 5.0
+        good: 3.0
+        average: 2.0
+
+    growth:
+      revenue_growth_yoy:
+        excellent: 20.0  # %
+        good: 15.0
+        average: 10.0
+      profit_growth_yoy:
+        excellent: 25.0
+        good: 20.0
+        average: 15.0
+      cagr_3y:
+        excellent: 15.0
+        good: 12.0
+        average: 10.0
+
+    valuation:
+      pe_ratio:
+        undervalued: 15.0
+        fair: 25.0
+        overvalued: 35.0
+      pb_ratio:
+        undervalued: 2.0
+        fair: 4.0
+        overvalued: 6.0
+
+    quality:
+      roe:
+        excellent: 20.0  # %
+        good: 15.0
+        average: 10.0
+      roce:
+        excellent: 18.0
+        good: 15.0
+        average: 12.0
+      operating_margin:
+        excellent: 20.0
+        good: 15.0
+        average: 10.0
+
+  red_flags:
+    - "debt_to_equity > 3.0"
+    - "current_ratio < 1.0"
+    - "negative_roe"
+    - "declining_revenue_3_quarters"
+    - "negative_free_cash_flow"
+
+  data_sources:
+    - "yfinance"
+    - "screener.in"  # For Indian stocks
+
+# Technical Analyst Agent
+technical_analyst:
+  enabled: true
+  name: "Technical Analyst"
+  description: "Detects patterns and validates with backtesting"
+
+  patterns_to_detect:
+    - "rounding_bottom"
+    - "cup_with_handle"
+    - "double_bottom"
+    - "ascending_triangle"
+    - "golden_cross"
+
+  indicators:
+    sma:
+      periods: [20, 50, 200]
+      use_for_trend: true
+    ema:
+      periods: [12, 26]
+      use_for_signals: true
+    rsi:
+      period: 14
+      overbought: 70
+      oversold: 30
+    macd:
+      fast: 12
+      slow: 26
+      signal: 9
+    volume:
+      avg_period: 20
+      surge_threshold: 2.0  # 2x average
+
+  pattern_requirements:
+    min_formation_days: 30
+    max_formation_days: 365
+    min_depth_percent: 15
+    volume_confirmation: true
+
+  entry_timing:
+    immediate: "pattern_just_completed"
+    wait_for_pullback: "pattern_extended"
+    avoid: "pattern_too_old"
+
+# Backtest Validator Agent
+backtest_validator:
+  enabled: true
+  name: "Backtest Validator"
+  description: "Validates technical strategies with historical data"
+
+  validation_requirements:
+    min_win_rate: 70.0  # %
+    min_trades: 10
+    min_sharpe_ratio: 1.0
+    max_drawdown: -30.0  # %
+    min_avg_return: 5.0  # %
+
+  backtest_settings:
+    historical_years: 5
+    initial_capital: 100000
+    position_size: 0.05  # 5% per trade
+    use_stop_loss: false  # Learned from V40
+    use_market_regime_filter: true  # Learned from V40
+
+  market_regime_filter:
+    use_index: "^NSEI"  # NIFTY 50
+    indicator: "SMA"
+    period: 50
+    rule: "price_above_sma"  # Only trade when index above SMA
+
+  caching:
+    enabled: true
+    ttl_days: 90
+    cache_by:
+      - "ticker"
+      - "strategy"
+      - "pattern"
+
+  strategies_to_test:
+    - "rhs_breakout"
+    - "cwh_breakout"
+    - "golden_cross"
+    - "double_bottom"
+
+# Sentiment Analyst Agent
+sentiment_analyst:
+  enabled: true
+  name: "Sentiment Analyst"
+  description: "Analyzes news, social media, and analyst opinions"
+
+  weights:
+    news_sentiment: 0.40
+    analyst_consensus: 0.40
+    social_sentiment: 0.20
+
+  data_sources:
+    perplexity:
+      enabled: true
+      model: "llama-3.1-sonar-large-128k-online"
+      lookback_days: 30
+      searches:
+        - "stock_sentiment"
+        - "recent_news"
+        - "analyst_opinions"
+
+    newsapi:
+      enabled: false  # Backup only
+      lookback_days: 7
+
+  sentiment_thresholds:
+    bullish: 70
+    neutral_high: 60
+    neutral_low: 40
+    bearish: 30
+
+  alert_on:
+    - "major_news_event"
+    - "analyst_upgrade"
+    - "analyst_downgrade"
+    - "high_social_buzz"
+    - "sentiment_reversal"
+
+# Management Analyst Agent
+management_analyst:
+  enabled: true
+  name: "Management Analyst"
+  description: "Evaluates management quality and credibility"
+
+  weights:
+    credibility: 0.40  # Promise vs performance
+    transparency: 0.30  # Honest about challenges
+    vision: 0.20       # Strategic clarity
+    risk_management: 0.10
+
+  data_sources:
+    conference_calls:
+      lookback_years: 3
+      min_calls_required: 4
+      extract_sections:
+        - "management_commentary"
+        - "guidance"
+        - "qa_session"
+
+    annual_reports:
+      lookback_years: 3
+      extract_sections:
+        - "management_discussion"
+        - "risk_factors"
+        - "future_outlook"
+
+  analysis_metrics:
+    promises_vs_performance:
+      revenue_guidance_accuracy: 0.30
+      margin_guidance_accuracy: 0.30
+      growth_guidance_accuracy: 0.40
+
+    red_flags:
+      - "frequent_management_changes"
+      - "repeated_missed_guidance"
+      - "lack_of_transparency"
+      - "aggressive_accounting"
+      - "regulatory_issues"
+
+  scoring:
+    excellent: 80  # Deliver consistently
+    good: 60       # Generally reliable
+    average: 40    # Mixed track record
+    poor: 20       # Frequent misses
+
+  caching:
+    enabled: true
+    ttl_days: 90  # Quarterly refresh
+    refresh_on_earnings: true
+
+# Execution Agent (for future use)
+execution_agent:
+  enabled: false  # Not implemented yet
+  name: "Execution Agent"
+  description: "Executes trades and manages positions"
+
+  broker: "zerodha"  # Placeholder
+  order_types:
+    - "market"
+    - "limit"
+
+  risk_checks:
+    verify_balance: true
+    verify_position_limits: true
+    verify_circuit_limits: true
+
+# System-wide settings
+system:
+  analysis_frequency: "daily"  # daily, weekly
+  analysis_time: "18:00"  # IST
+  universe_size: 50  # Number of stocks to analyze
+  watchlist_file: "config/watchlist.yaml"
+  blacklist_file: "config/blacklist.yaml"
+
+  notifications:
+    email: false
+    slack: false
+    telegram: false
+
+  data_retention:
+    raw_data_days: 365
+    analysis_results_days: 730
+    backtest_results_days: 365

@@ -1,0 +1,160 @@
+# LLM Configuration for Agentic Trading System
+
+# Default provider and model
+default_provider: "anthropic"  # openai or anthropic
+default_model: "claude-3.5-sonnet"  # gpt-4-turbo, claude-3.5-sonnet, claude-3.5-haiku
+
+# Model configurations
+models:
+  openai:
+    gpt-4-turbo:
+      max_tokens: 4000
+      temperature: 0.2
+      timeout: 60
+      retry_attempts: 3
+      cost_per_1k_input: 0.01
+      cost_per_1k_output: 0.03
+      use_for:
+        - fundamental_analysis
+        - technical_analysis
+        - risk_assessment
+
+  anthropic:
+    claude-3.5-sonnet:
+      max_tokens: 4000
+      temperature: 0.2
+      timeout: 60
+      retry_attempts: 3
+      cost_per_1k_input: 0.003
+      cost_per_1k_output: 0.015
+      use_for:
+        - management_analysis  # Best for long documents
+        - orchestrator_decisions
+        - pattern_interpretation
+
+    claude-3.5-haiku:
+      max_tokens: 2000
+      temperature: 0.2
+      timeout: 30
+      retry_attempts: 3
+      cost_per_1k_input: 0.0008
+      cost_per_1k_output: 0.004
+      use_for:
+        - sentiment_analysis
+        - quick_summaries
+        - data_extraction
+
+# Agent-specific LLM settings
+agent_llm_preferences:
+  orchestrator:
+    provider: "anthropic"
+    model: "claude-3.5-sonnet"
+    temperature: 0.1  # Low for consistent decisions
+    max_tokens: 4000
+
+  fundamental_analyst:
+    provider: "openai"
+    model: "gpt-4-turbo"
+    temperature: 0.2
+    max_tokens: 4000
+
+  technical_analyst:
+    provider: "openai"
+    model: "gpt-4-turbo"
+    temperature: 0.2
+    max_tokens: 3000
+
+  sentiment_analyst:
+    provider: "anthropic"
+    model: "claude-3.5-haiku"  # Fast and cheap for sentiment
+    temperature: 0.2
+    max_tokens: 2000
+
+  management_analyst:
+    provider: "anthropic"
+    model: "claude-3.5-sonnet"  # Best for long documents
+    temperature: 0.1  # Very low for factual analysis
+    max_tokens: 8000  # Higher for long reports
+
+  backtest_validator:
+    provider: "openai"
+    model: "gpt-4-turbo"
+    temperature: 0.1
+    max_tokens: 3000
+
+# Caching configuration
+caching:
+  enabled: true
+  ttl_seconds:
+    management_analysis: 7776000  # 90 days (quarterly)
+    fundamental_analysis: 604800   # 7 days (weekly)
+    sentiment_analysis: 86400      # 1 day (daily)
+    backtest_validation: 7776000   # 90 days (same strategy)
+  cache_keys:
+    # Format: {agent_name}:{ticker}:{data_hash}
+    include_ticker: true
+    include_date: true
+    include_data_hash: true
+
+# Rate limiting
+rate_limits:
+  openai:
+    requests_per_minute: 60
+    tokens_per_minute: 90000
+    concurrent_requests: 5
+
+  anthropic:
+    requests_per_minute: 50
+    tokens_per_minute: 100000
+    concurrent_requests: 5
+
+# Error handling
+error_handling:
+  retry_on_errors:
+    - "rate_limit_exceeded"
+    - "timeout"
+    - "server_error"
+  backoff_strategy: "exponential"  # linear or exponential
+  max_backoff_seconds: 60
+  fallback_to_cache: true
+  alert_on_failure: true
+
+# Token usage tracking
+usage_tracking:
+  enabled: true
+  log_every_n_requests: 10
+  alert_thresholds:
+    daily_cost: 50.0
+    monthly_cost: 1000.0
+    tokens_per_request: 10000
+  export_stats: true
+  export_interval_seconds: 3600  # Hourly
+
+# Response formatting
+response_formatting:
+  force_json: true
+  validate_json: true
+  retry_on_invalid_json: true
+  max_json_retries: 2
+
+# Prompt engineering
+prompts:
+  system_prompt_max_tokens: 500
+  user_prompt_max_tokens: 3000
+  include_examples: false  # Set to true for few-shot prompting
+  use_chain_of_thought: true  # Ask LLM to explain reasoning
+
+# Development/Debug settings
+debug:
+  log_prompts: false  # Log full prompts (disable in production)
+  log_responses: false  # Log full responses (disable in production)
+  save_raw_responses: false
+  mock_llm_calls: false  # Use for testing without API calls
+
+# Cost optimization
+cost_optimization:
+  prefer_cached_responses: true
+  use_cheaper_model_for_retries: false
+  compress_prompts: false
+  batch_similar_requests: false
+  enable_streaming: false

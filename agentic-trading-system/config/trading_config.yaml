@@ -1,0 +1,288 @@
+# Trading Configuration for Agentic Trading System
+
+# Portfolio settings
+portfolio:
+  initial_cash: 100000  # Starting capital in INR
+  currency: "INR"
+
+  position_sizing:
+    method: "fixed_percentage"  # fixed_percentage, risk_based, kelly
+    default_size: 0.05  # 5% of portfolio per position
+    min_size: 0.02      # 2% minimum
+    max_size: 0.10      # 10% maximum
+
+  risk_management:
+    max_portfolio_risk: 0.20  # 20% max drawdown allowed
+    max_position_risk: 0.02   # 2% risk per position
+    max_concurrent_positions: 10
+    max_sector_exposure: 0.30  # 30% max in one sector
+    max_single_stock: 0.10     # 10% max in one stock
+
+  diversification:
+    min_positions: 5
+    max_positions: 10
+    max_stocks_per_sector: 3
+    required_sectors: 3  # Must have exposure to at least 3 sectors
+
+# Trading rules
+trading_rules:
+  market_hours:
+    start: "09:15"  # IST
+    end: "15:30"    # IST
+    timezone: "Asia/Kolkata"
+
+  trade_only_on:
+    - "monday"
+    - "tuesday"
+    - "wednesday"
+    - "thursday"
+    - "friday"
+
+  exclude_dates:
+    - "2025-01-26"  # Republic Day
+    - "2025-08-15"  # Independence Day
+    - "2025-10-02"  # Gandhi Jayanti
+    # Add more holidays as needed
+
+  order_settings:
+    default_order_type: "limit"
+    limit_order_buffer: 0.005  # 0.5% buffer for limit orders
+    order_timeout_minutes: 30
+    max_retries: 3
+
+  execution_timing:
+    prefer_entry_time: "10:00"  # After opening volatility
+    prefer_exit_time: "15:00"   # Before closing
+    avoid_first_minutes: 15     # Skip first 15 mins
+    avoid_last_minutes: 15      # Skip last 15 mins
+
+# Entry rules
+entry_rules:
+  minimum_requirements:
+    fundamental_score: 50
+    technical_win_rate: 70
+    sentiment_score: 30  # Warning threshold
+    management_score: 40
+    backtest_validated: true
+
+  additional_filters:
+    min_market_cap: 1000  # Crores
+    min_avg_volume: 100000  # Daily volume
+    max_pe_ratio: 50
+    min_liquidity_ratio: 0.02  # Volume/Shares outstanding
+
+  market_conditions:
+    check_market_regime: true
+    required_regime: "BULLISH"  # or SIDEWAYS (avoid BEARISH)
+    check_vix: true
+    max_vix: 25  # Avoid trades when VIX > 25
+
+  pattern_specific:
+    rounding_bottom:
+      min_formation_days: 60
+      max_formation_days: 365
+      volume_surge_required: 2.0
+      breakout_confirmation: true
+
+    cup_with_handle:
+      min_formation_days: 30
+      max_formation_days: 365
+      handle_depth_max: 0.15  # 15% max
+      volume_surge_required: 1.5
+
+    golden_cross:
+      sma_fast: 50
+      sma_slow: 200
+      wait_for_confirmation: true
+      min_days_above: 3
+
+# Exit rules
+exit_rules:
+  stop_loss:
+    enabled: false  # Learned from V40: no stop loss improved returns
+    type: "none"
+
+  take_profit:
+    enabled: true
+    targets:
+      - level: 0.10  # 10%
+        sell_percentage: 0.33  # Sell 33% of position
+      - level: 0.20  # 20%
+        sell_percentage: 0.50  # Sell 50% of remaining
+      - level: 0.30  # 30%
+        sell_percentage: 1.00  # Sell all remaining
+
+  time_based:
+    enabled: true
+    max_holding_days: 180
+    review_frequency_days: 30
+
+  signal_based:
+    exit_on_pattern_break: true
+    exit_on_trend_reversal: true
+    exit_on_fundamental_deterioration: true
+    exit_on_management_red_flag: true
+
+  trailing_stop:
+    enabled: false
+    activation_profit: 0.15  # Start trailing at 15% profit
+    trailing_percent: 0.10   # Trail by 10%
+
+# Rebalancing
+rebalancing:
+  enabled: true
+  frequency: "monthly"
+  method: "threshold"  # threshold, periodic, opportunistic
+
+  thresholds:
+    position_drift: 0.05  # Rebalance if position drifts >5%
+    sector_drift: 0.10    # Rebalance if sector exposure drifts >10%
+
+  rules:
+    trim_winners: true
+    trim_threshold: 0.15  # Trim if position grows >15% of portfolio
+    add_to_losers: false  # Don't average down
+    max_rebalance_per_month: 3
+
+# Performance monitoring
+monitoring:
+  metrics:
+    - "total_return"
+    - "annualized_return"
+    - "sharpe_ratio"
+    - "max_drawdown"
+    - "win_rate"
+    - "avg_win"
+    - "avg_loss"
+    - "profit_factor"
+
+  benchmarks:
+    - "^NSEI"  # NIFTY 50
+    - "^NSEBANK"  # BANK NIFTY
+
+  reporting:
+    frequency: "daily"
+    include_attribution: true
+    include_risk_metrics: true
+
+  alerts:
+    daily_loss_threshold: -0.03  # Alert if -3% in a day
+    drawdown_threshold: -0.10    # Alert if -10% drawdown
+    position_loss_threshold: -0.15  # Alert if position down -15%
+
+# Backtesting settings
+backtesting:
+  historical_period_years: 5
+  initial_capital: 100000
+  commission: 0.0003  # 0.03% per trade
+  slippage: 0.001     # 0.1% slippage
+
+  validation:
+    min_win_rate: 70.0
+    min_trades: 10
+    min_sharpe: 1.0
+    max_drawdown: -0.30
+    min_avg_return: 0.05
+
+  walk_forward:
+    enabled: true
+    train_period_months: 36  # 3 years
+    test_period_months: 12   # 1 year
+    step_months: 6           # Roll forward 6 months
+
+# Risk controls
+risk_controls:
+  daily_limits:
+    max_trades: 5
+    max_turnover: 0.20  # 20% of portfolio
+
+  circuit_breakers:
+    daily_loss: -0.05    # Stop trading if -5% loss today
+    weekly_loss: -0.10   # Stop trading if -10% loss this week
+    monthly_loss: -0.15  # Stop trading if -15% loss this month
+
+  position_limits:
+    max_leverage: 1.0  # No leverage
+    max_concentration: 0.10
+
+  liquidity_requirements:
+    min_days_to_exit: 2  # Must be able to exit in 2 days
+    max_impact_cost: 0.01  # 1% max impact
+
+# Market regime filter (from V40)
+market_regime:
+  enabled: true
+  index: "^NSEI"
+  indicator: "SMA"
+  period: 50
+  rule: "price_above_sma"
+
+  regimes:
+    bullish:
+      condition: "price > sma_50 and sma_20 > sma_50"
+      position_sizing: 1.0  # Normal sizing
+      max_positions: 10
+
+    sideways:
+      condition: "sma_20 crosses sma_50"
+      position_sizing: 0.75  # Reduce to 75%
+      max_positions: 7
+
+    bearish:
+      condition: "price < sma_50 and sma_20 < sma_50"
+      position_sizing: 0.0  # No new positions
+      max_positions: 0
+      exit_all: false  # Don't force exit existing
+
+# Data and logging
+data:
+  sources:
+    primary: "yfinance"
+    fundamental: "screener.in"
+    sentiment: "perplexity"
+
+  caching:
+    price_data_minutes: 15
+    fundamental_data_days: 7
+    sentiment_data_days: 1
+
+  storage:
+    raw_data_path: "storage/market_data"
+    processed_data_path: "storage/market_data/processed"
+    backup_enabled: true
+    backup_frequency: "daily"
+
+logging:
+  level: "INFO"
+  format: "json"
+
+  files:
+    trades: "logs/trades.log"
+    decisions: "logs/decisions.log"
+    performance: "logs/performance.log"
+    errors: "logs/errors.log"
+
+  retention_days: 365
+
+  slack_notifications:
+    enabled: false
+    webhook_url: ""
+    notify_on:
+      - "trade_executed"
+      - "circuit_breaker_hit"
+      - "daily_loss_threshold"
+
+# Paper trading vs Live
+mode: "paper"  # paper or live
+
+paper_trading:
+  realistic_slippage: true
+  realistic_commissions: true
+  simulate_partial_fills: false
+
+live_trading:
+  broker: "zerodha"  # Placeholder
+  api_key: ""
+  api_secret: ""
+  require_2fa: true
+  max_order_value: 50000  # Max per order
