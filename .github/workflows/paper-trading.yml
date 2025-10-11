@@ -1,0 +1,116 @@
+name: Paper Trading (Cloud)
+
+# Run Monday-Friday at 3:00 PM IST (9:30 AM UTC)
+on:
+  schedule:
+    - cron: '30 9 * * 1-5'  # 3:00 PM IST = 9:30 AM UTC
+
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  paper-trading:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r agentic-trading-system/requirements.txt
+
+      - name: Create directories
+        run: |
+          cd agentic-trading-system
+          mkdir -p logs data backups
+
+      - name: Run paper trading
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          cd agentic-trading-system
+          # Run for market hours (6.25 hours = 22,500 seconds)
+          timeout 22500 python3 paper_trading/run_paper_trading.py || true
+
+      - name: Generate summary report
+        id: summary
+        if: always()
+        run: |
+          cd agentic-trading-system
+          echo "# Paper Trading Summary - $(date)" > summary.md
+          echo "" >> summary.md
+
+          # Extract portfolio metrics
+          if [ -f logs/paper_trading.log ]; then
+            echo "## Portfolio Status" >> summary.md
+            grep -E "Portfolio:|Total Value:|Return:|Positions:|Cash:" logs/paper_trading.log | tail -20 >> summary.md || echo "No portfolio data available" >> summary.md
+
+            echo "" >> summary.md
+            echo "## Recent Trades" >> summary.md
+            grep -E "POSITION OPENED|POSITION CLOSED" logs/paper_trading.log | tail -10 >> summary.md || echo "No trades executed" >> summary.md
+
+            echo "" >> summary.md
+            echo "## Recent Activity" >> summary.md
+            tail -50 logs/paper_trading.log >> summary.md
+          else
+            echo "No log file found" >> summary.md
+          fi
+
+          cat summary.md
+
+          # Set output for email
+          SUMMARY=$(cat summary.md)
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload portfolio data
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: portfolio-data-${{ github.run_number }}
+          path: |
+            agentic-trading-system/data/
+            agentic-trading-system/logs/
+            agentic-trading-system/summary.md
+          retention-days: 30
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: trading-logs-${{ github.run_number }}
+          path: agentic-trading-system/logs/
+          retention-days: 7
+
+      - name: Send email notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "Trading System Alert: Session Completed - ${{ github.run_number }}"
+          to: khuranaviki@gmail.com
+          from: Trading Bot
+          body: |
+            Paper Trading Session Completed
+
+            Run Number: ${{ github.run_number }}
+            Date: ${{ github.event.repository.updated_at }}
+            Status: ${{ job.status }}
+
+            Summary:
+            ${{ steps.summary.outputs.content }}
+
+            View full details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          attachments: agentic-trading-system/summary.md
