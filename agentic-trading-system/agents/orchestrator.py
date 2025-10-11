@@ -182,7 +182,6 @@ class Orchestrator(BaseAgent):
                 'confidence': decision['confidence'],
                 'composite_score': decision['composite_score'],
                 'position_size': decision.get('position_size', 0),
-                'stop_loss': decision.get('stop_loss'),
                 'target_price': decision.get('target_price'),
 
                 # Agent scores
@@ -395,7 +394,7 @@ class Orchestrator(BaseAgent):
             return primary_pattern['target_price']
 
         # Calculate based on pattern type
-        pattern_name = primary_pattern.get('name', '').lower()
+        pattern_name = (primary_pattern.get('name') or '').lower()
         resistance = technical.get('backtest_context', {}).get('resistance', 0)
         atr = technical.get('backtest_context', {}).get('atr', 0)
 
@@ -687,9 +686,8 @@ class Orchestrator(BaseAgent):
         # Pattern Validator already handled in veto logic above
         # No need to add backtest factors - Pattern Validator is the sole authority
 
-        # Calculate position size and stops (only for BUY decisions)
+        # Calculate position size and target (only for BUY decisions)
         position_size = 0
-        stop_loss = None
         target_price = None
 
         if action in ["BUY", "STRONG BUY"]:
@@ -697,33 +695,10 @@ class Orchestrator(BaseAgent):
                 composite_score, risk_level, fundamental, technical
             )
 
-            # Calculate stop loss (based on ATR or support)
+            # Calculate target price based on technical pattern
             current_price = technical.get('indicators', {}).get('price', {}).get('current')
             if current_price:
-                atr = technical.get('backtest_context', {}).get('atr', 0)
-                support = technical.get('backtest_context', {}).get('support', 0)
-
-                if atr:
-                    stop_loss = current_price - (2 * atr)  # 2x ATR stop
-                elif support:
-                    stop_loss = support * 0.98  # 2% below support
-
-                # Calculate target price based on technical pattern
                 target_price = self._calculate_pattern_target(technical, current_price)
-
-                # Ensure minimum risk-reward ratio of 2:1
-                if stop_loss and target_price:
-                    risk = current_price - stop_loss
-                    reward = target_price - current_price
-                    risk_reward_ratio = reward / risk if risk > 0 else 0
-
-                    # If pattern target doesn't meet 2:1 R:R, adjust it
-                    if risk_reward_ratio < 2.0:
-                        target_price = current_price + (2 * risk)
-                        self.logger.info(
-                            f"Pattern target adjusted to meet 2:1 R:R ratio: "
-                            f"₹{target_price:.2f}"
-                        )
 
         # Generate summary
         summary = self._generate_decision_summary(
@@ -735,7 +710,6 @@ class Orchestrator(BaseAgent):
             'confidence': round(confidence, 1),
             'composite_score': round(composite_score, 2),
             'position_size': position_size,
-            'stop_loss': stop_loss,
             'target_price': target_price,
             'factors': factors,
             'vetoes': vetoes,
@@ -895,8 +869,6 @@ async def main():
     print(f"Confidence: {result['confidence']:.1f}%")
     print(f"Position Size: {result['position_size']*100:.2f}% of portfolio")
 
-    if result.get('stop_loss'):
-        print(f"Stop Loss: ₹{result['stop_loss']:.2f}")
     if result.get('target_price'):
         print(f"Target Price: ₹{result['target_price']:.2f}")
 

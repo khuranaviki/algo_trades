@@ -1,0 +1,133 @@
+# Example Crontab Configuration for Automated Trading
+#
+# To install:
+#   1. Edit this file with your actual paths
+#   2. Run: crontab -e
+#   3. Copy the relevant lines below
+#   4. Save and exit
+#
+# To view current crontab: crontab -l
+# To remove crontab: crontab -r
+
+# ============================================================================
+# IMPORTANT: Set these paths to match your system
+# ============================================================================
+
+# Replace with your actual project directory
+# Example: /home/ubuntu/agentic-trading-system
+PROJECT_DIR=/path/to/agentic-trading-system
+
+# ============================================================================
+# Option 1: Start Paper Trading Every Weekday at 9:00 AM IST
+# ============================================================================
+# The start_paper_trading.sh script handles market hours automatically
+
+# Format: minute hour day-of-month month day-of-week command
+# Monday=1, Tuesday=2, ..., Friday=5
+
+# Start at 9:00 AM every Monday-Friday
+0 9 * * 1-5 cd $PROJECT_DIR && ./deploy/start_paper_trading.sh >> logs/cron.log 2>&1
+
+# Stop at 4:00 PM every Monday-Friday (1 hour after market close for cleanup)
+0 16 * * 1-5 cd $PROJECT_DIR && ./deploy/stop_services.sh >> logs/cron.log 2>&1
+
+
+# ============================================================================
+# Option 2: Keep Services Running 24/7 (for dashboard access)
+# ============================================================================
+# Start services on system boot
+
+@reboot cd $PROJECT_DIR && ./deploy/start_services.sh >> logs/cron.log 2>&1
+
+
+# ============================================================================
+# Option 3: Backup Portfolio State Daily at Midnight
+# ============================================================================
+
+0 0 * * * cd $PROJECT_DIR && mkdir -p backups && cp data/portfolio_state.json backups/portfolio_$(date +\%Y\%m\%d).json 2>&1
+
+
+# ============================================================================
+# Option 4: Weekly Performance Report (every Sunday at 8:00 PM)
+# ============================================================================
+
+0 20 * * 0 cd $PROJECT_DIR && python3 scripts/generate_weekly_report.py >> logs/reports.log 2>&1
+
+
+# ============================================================================
+# Environment Variables for Cron
+# ============================================================================
+# Cron has a minimal environment. Set API keys either:
+#
+# Option A: In crontab directly (less secure)
+# OPENAI_API_KEY=sk-your-key-here
+# ANTHROPIC_API_KEY=sk-ant-your-key-here
+#
+# Option B: Source from a file (more secure)
+# Create /path/to/agentic-trading-system/.env with:
+#   export OPENAI_API_KEY="sk-your-key"
+#   export ANTHROPIC_API_KEY="sk-ant-your-key"
+#
+# Then modify commands to source it:
+# 0 9 * * 1-5 source $PROJECT_DIR/.env && cd $PROJECT_DIR && ./deploy/start_paper_trading.sh >> logs/cron.log 2>&1
+
+
+# ============================================================================
+# Monitoring and Logging
+# ============================================================================
+# View cron logs:
+#   tail -f /path/to/agentic-trading-system/logs/cron.log
+#
+# View paper trading logs:
+#   tail -f /path/to/agentic-trading-system/logs/paper_trading.log
+#
+# Check if cron jobs are running:
+#   ps aux | grep paper_trading
+#   ps aux | grep streamlit
+
+
+# ============================================================================
+# Example: Full Setup for Monday Morning Automated Trading
+# ============================================================================
+
+# Set environment variables (Option A - less secure but simple)
+OPENAI_API_KEY=sk-your-openai-key-here
+ANTHROPIC_API_KEY=sk-ant-your-anthropic-key-here
+
+# Start services at 8:55 AM (5 minutes before market)
+55 8 * * 1-5 cd /home/ubuntu/agentic-trading-system && ./deploy/start_services.sh >> logs/cron.log 2>&1
+
+# Start paper trading at 9:00 AM
+0 9 * * 1-5 cd /home/ubuntu/agentic-trading-system && ./deploy/start_paper_trading.sh >> logs/cron.log 2>&1
+
+# Stop all services at 4:00 PM
+0 16 * * 1-5 cd /home/ubuntu/agentic-trading-system && ./deploy/stop_services.sh >> logs/cron.log 2>&1
+
+# Daily backup at midnight
+0 0 * * * cd /home/ubuntu/agentic-trading-system && mkdir -p backups && cp data/portfolio_state.json backups/portfolio_$(date +\%Y\%m\%d).json 2>&1
+
+
+# ============================================================================
+# Troubleshooting Cron
+# ============================================================================
+#
+# If cron jobs aren't running:
+#
+# 1. Check cron service is running:
+#    sudo systemctl status cron  # Ubuntu/Debian
+#    sudo systemctl status crond # CentOS/RHEL
+#
+# 2. Check cron logs:
+#    tail -f /var/log/syslog | grep CRON  # Ubuntu/Debian
+#    tail -f /var/log/cron                # CentOS/RHEL
+#
+# 3. Verify paths are absolute (not relative)
+#
+# 4. Test scripts manually first:
+#    cd /path/to/project && ./deploy/start_paper_trading.sh
+#
+# 5. Check permissions:
+#    chmod +x deploy/*.sh
+#
+# 6. Redirect stderr to see errors:
+#    command >> logs/cron.log 2>&1

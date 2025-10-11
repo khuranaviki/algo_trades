@@ -376,18 +376,13 @@ class HistoricalBacktest:
 
         position = self.portfolio.positions[ticker]
 
-        # Check stop loss
-        if self.order_executor.check_stop_loss(position, current_price):
-            await self._close_position(ticker, date, current_price, 'stop_loss_hit')
-            return
-
         # Check target
         if self.order_executor.check_target(position, current_price):
             await self._close_position(ticker, date, current_price, 'target_reached')
             return
 
         # NO HOLDING PERIOD LIMIT for backtest
-        # Let positions run until stop loss or target hit
+        # Let positions run until target hit
         # (Pattern validation uses 60-day limit, but actual trades have no time limit)
 
     async def _close_position(self, ticker: str, date: datetime, price: float, reason: str):

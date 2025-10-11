@@ -33,12 +33,34 @@ Orchestrator Agent
 
 ## 🚀 Quick Start
 
+### ⚡ NEW: Ready for Deployment!
+
+**For automated paper trading starting Monday morning:**
+
+1. **Read [QUICKSTART.md](QUICKSTART.md)** - Get started in 5 minutes
+2. **Or read [DEPLOYMENT.md](DEPLOYMENT.md)** - Full deployment guide
+
+```bash
+# 1. Set API keys
+export OPENAI_API_KEY="your-key"
+export ANTHROPIC_API_KEY="your-key"
+
+# 2. Start services
+./deploy/start_services.sh
+
+# 3. Start automated trading
+./deploy/start_paper_trading.sh
+```
+
+Access dashboard at http://localhost:8501
+
+---
+
 ### Prerequisites
 
-- Python 3.11+
-- Docker & Docker Compose
-- PostgreSQL 16+
-- Redis 7+
+- Python 3.9+
+- OpenAI API key (GPT-4)
+- Anthropic API key (Claude)
 
 ### Installation
 
@@ -46,7 +68,10 @@ Orchestrator Agent
 # Clone repository
 cd agentic-trading-system
 
-# Create virtual environment
+# Install dependencies
+pip install -r requirements.txt
+
+# Create virtual environment (optional)
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 

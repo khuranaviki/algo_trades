@@ -14,6 +14,7 @@ import logging
 from agents.orchestrator import Orchestrator
 from paper_trading.portfolio import Portfolio
 from paper_trading.engine import PaperTradingEngine
+from config.paper_trading_config import PAPER_TRADING_CONFIG
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -91,20 +92,16 @@ async def startup_event():
     logger.info("🚀 Starting Agentic Trading System API...")
 
     try:
-        # Initialize orchestrator
-        orchestrator = Orchestrator()
+        # Initialize orchestrator with config
+        orchestrator = Orchestrator(config=PAPER_TRADING_CONFIG['orchestrator'])
         logger.info("✅ Orchestrator initialized")
 
         # Initialize portfolio
-        portfolio = Portfolio(initial_capital=1000000)
+        portfolio = Portfolio(initial_capital=PAPER_TRADING_CONFIG.get('initial_capital', 1000000))
         logger.info("✅ Portfolio initialized")
 
         # Initialize paper trading engine
-        paper_trading_engine = PaperTradingEngine(
-            orchestrator=orchestrator,
-            portfolio=portfolio,
-            watchlist=["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS"]  # Default watchlist
-        )
+        paper_trading_engine = PaperTradingEngine(config=PAPER_TRADING_CONFIG)
         logger.info("✅ Paper Trading Engine initialized")
 
         logger.info("🎉 System ready!")
@@ -162,8 +159,15 @@ async def analyze_stock(
     try:
         logger.info(f"📊 Analyzing {ticker}...")
 
+        # Prepare context for analysis
+        context = {
+            'current_date': datetime.now().isoformat(),
+            'source': 'api',
+            'use_llm': use_llm
+        }
+
         # Run analysis
-        result = await orchestrator.analyze(ticker)
+        result = await orchestrator.analyze(ticker, context)
 
         if not result:
             raise HTTPException(status_code=500, detail="Analysis failed")

@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from agents.orchestrator import Orchestrator
 from paper_trading.portfolio import Portfolio
+from config.paper_trading_config import PAPER_TRADING_CONFIG
 
 # Page configuration
 st.set_page_config(
@@ -68,7 +69,7 @@ if 'analysis_history' not in st.session_state:
 @st.cache_resource
 def get_orchestrator():
     """Initialize and cache orchestrator"""
-    return Orchestrator()
+    return Orchestrator(config=PAPER_TRADING_CONFIG['orchestrator'])
 
 
 def run_analysis(ticker: str):
@@ -76,7 +77,12 @@ def run_analysis(ticker: str):
     with st.spinner(f'🔍 Analyzing {ticker}...'):
         try:
             orchestrator = get_orchestrator()
-            result = asyncio.run(orchestrator.analyze(ticker))
+            # Provide context for analysis
+            context = {
+                'current_date': datetime.now().isoformat(),
+                'source': 'streamlit_ui'
+            }
+            result = asyncio.run(orchestrator.analyze(ticker, context))
 
             if result:
                 # Add to history
@@ -168,7 +174,7 @@ def show_live_analysis():
 
                 # Decision display
                 decision = result.get('decision', 'WAIT')
-                score = result.get('score', 0)
+                score = result.get('composite_score', result.get('score', 0))  # Try composite_score first
 
                 decision_class = {
                     'BUY': 'buy-signal',
@@ -183,21 +189,23 @@ def show_live_analysis():
                 col_a, col_b, col_c = st.columns(3)
                 col_a.metric("Composite Score", f"{score:.1f}/100")
                 col_b.metric("Confidence", f"{result.get('confidence', 0)}%")
-                col_c.metric("Signal Strength", result.get('technical', {}).get('signal_strength', 'N/A'))
+                col_c.metric("Signal Strength", result.get('technical_analysis', {}).get('signal_strength', 'N/A'))
 
                 # Agent scores
                 st.markdown("### Agent Scores")
                 agent_cols = st.columns(5)
-                agent_cols[0].metric("Fundamental", f"{result.get('fundamental', {}).get('score', 0):.1f}")
-                agent_cols[1].metric("Technical", f"{result.get('technical', {}).get('score', 0):.1f}")
-                agent_cols[2].metric("Sentiment", f"{result.get('sentiment', {}).get('score', 0):.1f}")
-                agent_cols[3].metric("Management", f"{result.get('management', {}).get('score', 0):.1f}")
-                agent_cols[4].metric("Market Regime", f"{result.get('market_regime', {}).get('score', 0):.1f}")
+                agent_scores = result.get('agent_scores', {})
+                agent_cols[0].metric("Fundamental", f"{agent_scores.get('fundamental', 0):.1f}")
+                agent_cols[1].metric("Technical", f"{agent_scores.get('technical', 0):.1f}")
+                agent_cols[2].metric("Sentiment", f"{agent_scores.get('sentiment', 0):.1f}")
+                agent_cols[3].metric("Management", f"{agent_scores.get('management', 0):.1f}")
+                agent_cols[4].metric("Market Regime", f"{agent_scores.get('market_regime', 0):.1f}")
 
                 # Technical signal details
-                if result.get('technical', {}).get('signal'):
+                tech_analysis = result.get('technical_analysis', {})
+                if tech_analysis.get('signal'):
                     st.markdown("### Technical Signal")
-                    signal = result['technical']['signal']
+                    signal = tech_analysis['signal']
 
                     sig_col1, sig_col2, sig_col3 = st.columns(3)
                     sig_col1.write(f"**Pattern:** {signal.get('pattern_type', 'N/A')}")
@@ -206,11 +214,12 @@ def show_live_analysis():
 
                 # Reasoning
                 st.markdown("### Analysis Reasoning")
-                st.info(result.get('reasoning', 'No reasoning available'))
+                st.info(result.get('summary', result.get('reasoning', 'No reasoning available')))
 
                 # Warnings/Vetoes
-                if result.get('vetoes'):
-                    st.warning("⚠️ **Vetoes:** " + ", ".join(result['vetoes']))
+                vetoes = result.get('vetoes', [])
+                if vetoes:
+                    st.warning("⚠️ **Vetoes:** " + ", ".join(vetoes))
 
     with col2:
         st.subheader("Recent Analysis")
@@ -244,10 +253,10 @@ def show_portfolio():
 
     # Portfolio metrics
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Total Value", f"₹{portfolio.total_value:,.0f}")
+    col1.metric("Total Value", f"₹{portfolio.get_total_value():,.0f}")
     col2.metric("Cash", f"₹{portfolio.cash:,.0f}")
-    col3.metric("P&L", f"₹{portfolio.realized_pnl + portfolio.unrealized_pnl:,.0f}")
-    col4.metric("Return", f"{portfolio.total_return_pct:.2f}%")
+    col3.metric("P&L", f"₹{portfolio.get_realized_pnl() + portfolio.get_unrealized_pnl():,.0f}")
+    col4.metric("Return", f"{portfolio.get_total_return_pct():.2f}%")
 
     st.markdown("---")
 
@@ -260,13 +269,12 @@ def show_portfolio():
             positions_data.append({
                 'Ticker': ticker,
                 'Quantity': pos.quantity,
-                'Avg Price': f"₹{pos.avg_price:.2f}",
+                'Avg Price': f"₹{pos.avg_entry_price:.2f}",
                 'Current Price': f"₹{pos.current_price:.2f}",
-                'Value': f"₹{pos.quantity * pos.current_price:,.0f}",
-                'P&L': f"₹{(pos.current_price - pos.avg_price) * pos.quantity:,.0f}",
-                'P&L %': f"{((pos.current_price - pos.avg_price) / pos.avg_price) * 100:.2f}%",
-                'Stop Loss': f"₹{pos.stop_loss:.2f}" if pos.stop_loss else "N/A",
-                'Target': f"₹{pos.target:.2f}" if pos.target else "N/A"
+                'Value': f"₹{pos.market_value:,.0f}",
+                'P&L': f"₹{pos.unrealized_pnl:,.0f}",
+                'P&L %': f"{pos.unrealized_pnl_pct:.2f}%",
+                'Target': f"₹{pos.target_price:.2f}" if pos.target_price else "N/A"
             })
 
         df = pd.DataFrame(positions_data)

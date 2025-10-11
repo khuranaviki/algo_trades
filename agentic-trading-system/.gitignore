@@ -78,3 +78,43 @@ backups/
 tmp/
 temp/
 *.tmp
+
+# SECURITY: API Keys and Credentials (NEVER COMMIT THESE!)
+*.pem
+*.key
+*.crt
+*.p12
+credentials.json
+service-account.json
+auth.json
+*.env
+.env.*
+!.env.example
+*_secrets.py
+*_keys.py
+config/secrets.py
+config/api_keys.py
+
+# SECURITY: Trading data (contains sensitive information)
+data/
+portfolio_state.json
+trade_history.csv
+positions.json
+orders.json
+
+# Project-specific logs
+streamlit_app.log
+enhanced_technical_test.log
+full_test_output.log
+quick_bugfix_test.log
+quick_bugfix_test2.log
+v40_full_backtest_6months.log
+full_6month_backtest.log
+enhanced_quarterly_6m_backtest.log
+run_historical_backtest.log
+
+# Caches
+yfinance_cache/
+screener_cache/
+pattern_cache/
+.streamlit/secrets.toml

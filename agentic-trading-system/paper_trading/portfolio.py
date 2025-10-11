@@ -160,20 +160,16 @@ class Portfolio:
         ticker: str,
         score: float,
         risk_level: str,
-        current_price: float,
-        stop_loss: Optional[float] = None
+        current_price: float
     ) -> int:
         """
-        Calculate safe position size
-
-        Uses simplified Kelly Criterion or fixed-fractional based on score
+        Calculate safe position size based on score and risk level
 
         Args:
             ticker: Stock ticker
             score: Composite score (0-100)
             risk_level: 'low', 'medium', 'high'
             current_price: Current stock price
-            stop_loss: Stop loss price (for risk-based sizing)
 
         Returns:
             Number of shares to buy
@@ -194,15 +190,8 @@ class Portfolio:
         total_value = self.get_total_value()
         position_value = total_value * position_pct
 
-        # If stop loss provided, use risk-based sizing
-        if stop_loss and stop_loss < current_price:
-            risk_per_share = current_price - stop_loss
-            risk_pct = 0.01  # Risk 1% of portfolio per trade
-            max_loss = total_value * risk_pct
-            quantity = int(max_loss / risk_per_share)
-        else:
-            # Simple value-based sizing
-            quantity = int(position_value / current_price)
+        # Simple value-based sizing (NO stop-loss logic)
+        quantity = int(position_value / current_price)
 
         # Ensure we have enough cash
         cost = quantity * current_price

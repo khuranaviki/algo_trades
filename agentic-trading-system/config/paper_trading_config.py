@@ -90,7 +90,7 @@ PAPER_TRADING_CONFIG = {
 
         # Fundamental analysis config
         'fundamental_config': {
-            'use_perplexity': True,
+            'use_perplexity': False,  # Disabled: async event loop issues in Streamlit
             'use_llm': True,
             'llm_provider': 'openai',
             'llm_model': 'gpt-4-turbo'
@@ -99,7 +99,7 @@ PAPER_TRADING_CONFIG = {
         # Sentiment analysis config
         'sentiment_config': {
             'news_lookback_days': 30,
-            'use_perplexity': True
+            'use_perplexity': False  # Disabled: async event loop issues in Streamlit
         },
 
         # Management quality config

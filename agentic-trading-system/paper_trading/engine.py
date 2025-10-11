@@ -282,7 +282,7 @@ class PaperTradingEngine:
                 ticker=ticker,
                 quantity=order_result['quantity'],
                 price=order_result['fill_price'],
-                stop_loss=analysis.get('stop_loss'),
+                stop_loss=None,
                 target=analysis.get('target_price'),
                 reason=analysis.get('decision_reasoning', ''),
                 transaction_cost=order_result['transaction_cost']
@@ -298,7 +298,6 @@ class PaperTradingEngine:
                 f"   Quantity:     {quantity} shares\n"
                 f"   Entry Price:  ₹{order_result['fill_price']:.2f}\n"
                 f"   Total Cost:   ₹{order_result['total_cost']:,.2f}\n"
-                f"   Stop Loss:    ₹{analysis.get('stop_loss', 0):.2f}\n"
                 f"   Target:       ₹{analysis.get('target_price', 0):.2f}\n"
                 f"   Score:        {analysis.get('composite_score', 0):.1f}/100\n"
                 f"{'='*80}\n"
@@ -312,7 +311,6 @@ class PaperTradingEngine:
         Manage existing position
 
         Checks:
-        - Stop loss
         - Target
         - Exit signals from orchestrator
 
@@ -330,11 +328,6 @@ class PaperTradingEngine:
             f"   {ticker}: ₹{current_price:.2f} | "
             f"P&L: {position.unrealized_pnl_pct:+.2f}% (₹{position.unrealized_pnl:+,.0f})"
         )
-
-        # Check stop loss
-        if self.order_executor.check_stop_loss(position, current_price):
-            await self._close_position(ticker, current_price, 'stop_loss_hit')
-            return
 
         # Check target
         if self.order_executor.check_target(position, current_price):
