@@ -1,7 +1,7 @@
 # Agentic Trading System - Core Dependencies
 
 # Core Framework
-python>=3.11
+# Python 3.11+ required (specified in workflow/setup, not installable via pip)
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
 pydantic>=2.4.0
