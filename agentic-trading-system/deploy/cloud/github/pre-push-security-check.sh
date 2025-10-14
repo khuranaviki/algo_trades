@@ -94,8 +94,10 @@ echo ""
 
 # Check 8: Scan for private keys
 echo "✓ Checking for private keys..."
-if git grep -n "BEGIN.*PRIVATE KEY" -- ':!*.md' 2>/dev/null; then
+PRIVATE_KEYS=$(git grep -n "BEGIN.*PRIVATE KEY" -- ':!*.md' ':!*.sh' 2>/dev/null || true)
+if [ -n "$PRIVATE_KEYS" ]; then
     echo "❌ FAIL: Found private key in code!"
+    echo "$PRIVATE_KEYS"
     FAILED=1
 else
     echo "  ✅ No private keys found"
