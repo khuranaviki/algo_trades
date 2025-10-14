@@ -1,9 +1,9 @@
 name: Paper Trading (Cloud)
 
-# Run Monday-Friday at 3:00 PM IST (9:30 AM UTC)
+# Run Monday-Friday at 9:30 AM IST (4:00 AM UTC) - market opening time
 on:
   schedule:
-    - cron: '30 9 * * 1-5'  # 3:00 PM IST = 9:30 AM UTC
+    - cron: '0 4 * * 1-5'  # 9:30 AM IST = 4:00 AM UTC (market opens at 9:15 AM IST)
 
   workflow_dispatch:  # Allow manual trigger
 
