@@ -21,6 +21,7 @@ from agents.fundamental_analyst import FundamentalAnalyst
 from agents.technical_analyst import TechnicalAnalyst
 from agents.sentiment_analyst import SentimentAnalyst
 from agents.management_analyst import ManagementAnalyst
+from tools.llm_decision_cache import LLMDecisionCache
 
 
 class Orchestrator(BaseAgent):
@@ -92,6 +93,15 @@ class Orchestrator(BaseAgent):
         self.management_analyst = ManagementAnalyst(
             config.get('management_config', {})
         )
+
+        # Initialize LLM decision cache
+        self.llm_cache = LLMDecisionCache()
+        cache_stats = self.llm_cache.get_statistics()
+        if cache_stats['total_decisions'] > 0:
+            self.logger.info(
+                f"💾 LLM Cache initialized: {cache_stats['total_decisions']} decisions, "
+                f"{cache_stats['hit_rate']:.1f}% hit rate"
+            )
 
         self.logger.info("All specialist agents initialized")
 
@@ -617,23 +627,56 @@ class Orchestrator(BaseAgent):
         ticker = fundamental.get('ticker', context.get('ticker', 'UNKNOWN'))
 
         if use_llm_synthesis:
-            # Get company name
-            company_name = context.get('company_name', fundamental.get('company_name', ticker))
+            # Try cache first
+            agent_scores = {
+                'fundamental': fundamental.get('score', 0),
+                'technical': technical.get('score', 0),
+                'sentiment': sentiment.get('score', 0),
+                'management': management.get('score', 0)
+            }
 
-            # Call LLM for conflict resolution
-            llm_synthesis = await self._llm_conflict_resolution(
+            llm_synthesis = self.llm_cache.get_cached_decision(
                 ticker=ticker,
-                company_name=company_name,
-                agent_results={
-                    'fundamental': fundamental,
-                    'technical': technical,
-                    'sentiment': sentiment,
-                    'management': management
-                },
+                agent_scores=agent_scores,
                 conflict_info=conflict_info,
                 composite_score=composite_score,
-                technical_signal=technical_signal
+                similarity_threshold=0.85
             )
+
+            # If not in cache, call LLM
+            if llm_synthesis is None:
+                # Get company name
+                company_name = context.get('company_name', fundamental.get('company_name', ticker))
+
+                # Call LLM for conflict resolution
+                llm_synthesis = await self._llm_conflict_resolution(
+                    ticker=ticker,
+                    company_name=company_name,
+                    agent_results={
+                        'fundamental': fundamental,
+                        'technical': technical,
+                        'sentiment': sentiment,
+                        'management': management
+                    },
+                    conflict_info=conflict_info,
+                    composite_score=composite_score,
+                    technical_signal=technical_signal
+                )
+
+                # Cache the decision if LLM call succeeded
+                if llm_synthesis:
+                    self.llm_cache.cache_decision(
+                        ticker=ticker,
+                        agent_scores=agent_scores,
+                        conflict_info=conflict_info,
+                        composite_score=composite_score,
+                        decision=llm_synthesis,
+                        metadata={
+                            'date': datetime.now().isoformat(),
+                            'has_technical_signal': technical_signal['has_signal'],
+                            'signal_type': technical_signal.get('signal_type')
+                        }
+                    )
 
         # Determine action (use LLM synthesis if available, otherwise rule-based)
         if llm_synthesis:

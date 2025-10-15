@@ -41,7 +41,7 @@ jobs:
       - name: Create directories
         run: |
           cd agentic-trading-system
-          mkdir -p logs data backups
+          mkdir -p logs data backups storage/llm_decisions
 
       - name: Run paper trading
         env:
@@ -92,6 +92,7 @@ jobs:
           path: |
             agentic-trading-system/data/
             agentic-trading-system/logs/
+            agentic-trading-system/storage/llm_decisions/
             agentic-trading-system/summary.md
           retention-days: 30
 

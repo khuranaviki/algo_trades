@@ -57,6 +57,9 @@ storage/backtest_validation/cache/*
 # Cache
 .cache/
 *.cache
+storage/cache/*.db
+storage/cache/*.db-shm
+storage/cache/*.db-wal
 
 # Jupyter
 .ipynb_checkpoints/

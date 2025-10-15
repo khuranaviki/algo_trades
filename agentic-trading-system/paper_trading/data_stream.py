@@ -130,7 +130,14 @@ class LiveDataStream:
             latest = df.iloc[-1]
 
             # Get current price (last trade)
-            info = stock.info
+            # Handle case where stock.info returns None (Yahoo Finance API issues)
+            try:
+                info = stock.info
+                if info is None:
+                    info = {}
+            except Exception:
+                info = {}
+
             current_price = info.get('currentPrice') or info.get('regularMarketPrice') or latest['Close']
 
             price_data = {
@@ -142,14 +149,19 @@ class LiveDataStream:
                 'low': latest['Low'],
                 'close': latest['Close'],
                 'volume': latest['Volume'],
-                'bid': info.get('bid', current_price * 0.9995),
-                'ask': info.get('ask', current_price * 1.0005)
+                'bid': info.get('bid', current_price * 0.9995) if info else current_price * 0.9995,
+                'ask': info.get('ask', current_price * 1.0005) if info else current_price * 1.0005
             }
 
             return price_data
 
         except Exception as e:
             self.logger.error(f"❌ Failed to get price for {ticker}: {e}")
+            # Return last cached price if available (fail-safe)
+            cached = self.cache.get(ticker)
+            if cached:
+                self.logger.warning(f"⚠️ Using cached price for {ticker}")
+                return cached
             return None
 
     def subscribe(self, callback: Callable):
